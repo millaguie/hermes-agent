@@ -31,6 +31,18 @@ RUN apt-get update && \
     ca-certificates curl iputils-ping python3 python-is-python3 ripgrep ffmpeg gcc g++ make cmake python3-dev python3-venv libffi-dev libolm-dev procps git openssh-client docker-cli xz-utils && \
     rm -rf /var/lib/apt/lists/*
 
+# ---------- evilio toolchain (fork) ----------
+# Tools the self-hosted bots rely on at runtime that upstream's base image does
+# not ship: gnupg + pass (superlopez / hermes-personal decrypt secrets from the
+# pass store), and jq/wget/screen/socat/unzip/rsync used by skills, cron jobs
+# and worker scripts. Kept as a separate additive layer so it survives rebases
+# onto new upstream releases without touching the line above. Parity target:
+# the pre-fork evilio image (tea.millaguie.net/.../hermes-agent-evilio).
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    gnupg pass pinentry-curses jq wget screen socat unzip rsync && \
+    rm -rf /var/lib/apt/lists/*
+
 # ---------- s6-overlay install ----------
 # s6-overlay provides supervision for the main hermes process, the dashboard,
 # and per-profile gateways. /init becomes PID 1 below — see ENTRYPOINT.
@@ -177,7 +189,7 @@ RUN npm install --prefer-offline --no-audit && \
 # The editable link is created after the source copy below.
 COPY pyproject.toml uv.lock ./
 RUN touch ./README.md
-RUN uv sync --frozen --no-install-project --extra all --extra messaging --extra anthropic --extra bedrock --extra azure-identity --extra hindsight --extra matrix
+RUN uv sync --frozen --no-install-project --extra all --extra messaging --extra anthropic --extra bedrock --extra azure-identity --extra hindsight --extra matrix --extra postgres
 
 # ---------- Frontend build (cached independently from Python source) ----------
 # Copy only the frontend source trees first so that Python-only changes don't

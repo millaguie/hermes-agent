@@ -1445,6 +1445,22 @@ def connect(
       ``HERMES_KANBAN_DB`` env → ``HERMES_KANBAN_BOARD`` env →
       ``<root>/kanban/current`` → ``default``.
     """
+    # Backend chokepoint (fork: postgres-kanban). When a non-sqlite kanban
+    # backend is configured, every caller that opens a connection through
+    # connect() / connect_closing() (worker tools, CLI, dispatcher, heartbeat
+    # bridge) transparently gets that backend, so the fork lives in this single
+    # hunk instead of one edit per call site. An explicit ``db_path`` forces the
+    # SQLite path (tests, callers that target a specific file). All routing
+    # logic stays in hermes_cli.kanban_store_* (imported lazily to avoid an
+    # import cycle and to keep the default SQLite path free of psycopg).
+    if db_path is None:
+        try:
+            from hermes_cli.kanban_store_factory import maybe_runtime_connection
+            _runtime_conn = maybe_runtime_connection(board=board)
+        except Exception:
+            _runtime_conn = None
+        if _runtime_conn is not None:
+            return _runtime_conn
     if db_path is not None:
         path = db_path
     else:
