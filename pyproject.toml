@@ -255,10 +255,21 @@ youtube = [
   # at first invocation with ModuleNotFoundError (issue #22243).
   "youtube-transcript-api==1.2.4",
 ]
+# Kanban Postgres backend (kanban.storage.backend: postgres). Opt-in: the
+# default SQLite path never imports psycopg, so this stays out of core/[all].
+postgres = ["psycopg[binary]==3.3.4"]
 # `hermes dashboard` (localhost SPA + API).  Not in core to keep the default install lean.
 # starlette==1.0.1 pinned for CVE-2026-48710 (BadHost) — fastapi pulls Starlette
 # transitively and pre-1.0.1 is the vulnerable range. See the mcp extra above.
 web = ["fastapi==0.133.1", "uvicorn[standard]==0.41.0", "starlette==1.0.1", "python-multipart==0.0.27"]
+# Self-hosted web_extract fallback: curl_cffi with impersonate="chrome"
+# reproduces a real Chrome TLS/JA3 fingerprint so the searxng user-plugin
+# (evilio override) can fetch Cloudflare/anti-bot pages that plain httpx
+# gets 403/503/challenge on. Baked (via [all]) rather than lazy-installed
+# because it backs a USER plugin that isn't wired into tools/lazy_deps.py;
+# the plugin still degrades gracefully if it's absent. abi3
+# manylinux2014_aarch64 wheel — no build toolchain needed on ARM.
+web-search = ["curl_cffi==0.15.0"]
 all = [
   # Policy (2026-05-12): `[all]` includes only extras that genuinely
   # CAN'T be lazy-installed via `tools/lazy_deps.py` — i.e. things every
@@ -290,6 +301,7 @@ all = [
   "hermes-agent[acp]",
   "hermes-agent[google]",
   "hermes-agent[web]",
+  "hermes-agent[web-search]",
   "hermes-agent[youtube]",
 ]
 
